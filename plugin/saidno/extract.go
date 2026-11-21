@@ -50,7 +50,7 @@ Rules:
 - Only the CURRENT message creates rules. EARLIER messages are context only (for example to know who "her" is).
 - "deny": the user forbids an action ("don't email anyone", "never delete files in /contracts", "do not post this yet").
 - "allow": the user now permits an action, often lifting an earlier refusal ("ok, you can email Priya now").
-- Use "where" to narrow a rule to what the user named (a recipient, a folder, a channel). Leave "where" empty when the user meant every use of the tool. Use argument names from the tool's parameters.
+- Use "where" only to narrow a rule to something the user named IN THE QUOTED WORDS (a recipient, a folder, a channel). Every "value" must appear in the quote. Never guess a value from a URL, a page or a file name. Leave "where" empty when the user meant every use of the tool. Use argument names from the tool's parameters.
 - "quote" must be copied exactly from the CURRENT message. Never paraphrase.
 - A request to do something ("email the summary to Priya") is an allow for that action only if the user explicitly grants permission; a plain task request is NOT a rule.
 - If the message refuses or permits nothing about actions, return {"rules": []}.

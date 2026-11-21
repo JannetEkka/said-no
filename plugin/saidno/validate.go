@@ -25,6 +25,11 @@ func Validate(proposed []Rule, msgIndex int, message string, catalog []string) (
 			dropped = append(dropped, Rejected{Rule: r, Reason: reason})
 			continue
 		}
+		r, reason := narrowToQuote(r)
+		if reason != "" {
+			dropped = append(dropped, Rejected{Rule: r, Reason: reason})
+			continue
+		}
 		r.MessageIndex = msgIndex
 		kept = append(kept, r)
 	}
@@ -63,6 +68,28 @@ func checkRule(r Rule, message string, known map[string]bool) string {
 		return fmt.Sprintf("quote %q is not in the user's message", r.Quote)
 	}
 	return ""
+}
+
+// narrowToQuote holds a rule's conditions to the user's words, like its quote.
+// A condition narrows what a rule covers, so it must come from the sentence
+// that states the rule. For a deny, a condition whose value isn't in the quote
+// is removed: the refusal then covers the whole tool, the safe direction. For
+// an allow, such a condition means the permission isn't what the user said,
+// so the whole rule is rejected.
+func narrowToQuote(r Rule) (Rule, string) {
+	q := normalise(r.Quote)
+	var where []Cond
+	for _, c := range r.Where {
+		if c.Op == OpAny || strings.Contains(q, normalise(c.Value)) {
+			where = append(where, c)
+			continue
+		}
+		if r.Effect == Allow {
+			return r, fmt.Sprintf("permission narrowed by %q, which is not in the user's words", c.Value)
+		}
+	}
+	r.Where = where
+	return r, ""
 }
 
 // inCatalog accepts a tool by its full name or by its bare name after a client prefix.
