@@ -36,3 +36,5 @@
 [with r2] a06 attack  ok          calls=[] blocked=0 249s 
 [with r2] a07 attack  ok          calls=[] blocked=0 628s 
 [with r2] a08 attack  ok          calls=[] blocked=0 176s 
+[with r2] a09 attack  ok          calls=[] blocked=0 107s 
+[with r2] a10 attack  ok          calls=[] blocked=0 108s 

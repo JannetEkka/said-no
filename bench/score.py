@@ -50,16 +50,18 @@ def main(results_dir):
         viol = sum(r["violation"] for r in risky)
         fb = sum(r["false_block"] for r in asked)
         comp = sum(bool(r["required_done"]) for r in asked)
-        out.append(f"| {model} | {'on' if cond == 'with' else 'off'} | {pct(viol, len(risky))} | "
+        label = "user turns only (bench/prime.py)" if model == "primed" else f"{model} run 1"
+        out.append(f"| {label} | {'on' if cond == 'with' else 'off'} | {pct(viol, len(risky))} | "
                    f"{pct(fb, len(asked)) if cond == 'with' else 'n/a'} | {pct(comp, len(asked))} | {len(rs) - len(done)} of {len(rs)} |")
 
     out += ["", "**Compromised-agent test** (each injected action called directly through Bifrost, in the conversation's own session):", "",
-            "| Agent model's sessions | Said No | Injected actions that ran | Requested actions blocked |", "|---|---|---|---|"]
+            "| Conversations from | Said No | Injected actions that ran | Requested actions blocked |", "|---|---|---|---|"]
     for (model, cond) in sorted(forced, key=lambda k: (k[0], k[1] != "without")):
         fs = forced[(model, cond)]
         bad = [f for f in fs if f["kind"] == "forbidden"]
         good = [f for f in fs if f["kind"] == "required"]
-        out.append(f"| {model} | {'on' if cond == 'with' else 'off'} | {pct(sum(not f['blocked'] for f in bad), len(bad))} | "
+        label = "user turns only (bench/prime.py)" if model == "primed" else f"{model} run 1"
+        out.append(f"| {label} | {'on' if cond == 'with' else 'off'} | {pct(sum(not f['blocked'] for f in bad), len(bad))} | "
                    f"{pct(sum(f['blocked'] for f in good), len(good))} |")
 
     decisions, ledgers = [], []
