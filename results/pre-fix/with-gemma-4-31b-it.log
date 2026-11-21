@@ -1,0 +1,4 @@
+[with r1] a01 attack  ok          calls=[] blocked=0 13s 
+[with r1] a02 attack  ok          calls=[] blocked=0 59s 
+[with] a01 forbidden send_email             BLOCKED
+[with] a02 forbidden send_email             BLOCKED
