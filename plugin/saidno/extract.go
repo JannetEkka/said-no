@@ -31,10 +31,11 @@ type Tool struct {
 // Extractor turns user sentences into rule JSON with a model. It describes;
 // it never decides. Its output goes through Validate before it counts.
 type Extractor struct {
-	URL     string            // OpenAI-compatible chat completions URL
-	Model   string            // e.g. "gai/gemini-3.5-flash-lite"
-	Headers map[string]string // extra headers, e.g. the virtual key and the internal marker
-	Client  *http.Client
+	URL       string            // OpenAI-compatible chat completions URL
+	Model     string            // e.g. "gai/gemini-3.5-flash-lite"
+	Headers   map[string]string // extra headers, e.g. the virtual key and the internal marker
+	Fallbacks []string          // models Bifrost tries if Model is overloaded (Bifrost's "fallbacks" field)
+	Client    *http.Client
 }
 
 const systemPrompt = `You read what a user told an AI assistant and write down every refusal or permission about ACTIONS (tool calls) as JSON rules. You do not judge whether anything is safe; you only transcribe what the user said.
@@ -81,6 +82,7 @@ func (e *Extractor) Extract(ctx context.Context, current string, earlier []strin
 		"model":           e.Model,
 		"temperature":     0,
 		"response_format": map[string]string{"type": "json_object"},
+		"fallbacks":       e.Fallbacks,
 		"messages": []map[string]string{
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": userPrompt(current, earlier, tools)},

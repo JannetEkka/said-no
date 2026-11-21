@@ -10,7 +10,9 @@ import os
 import sys
 
 VK = "sk-bf-saidno-local"
-MODELS = ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"]
+# Passed to the Tavily MCP process when set. Bifrost refuses to start a client whose listed variable is unset.
+TAVILY_ENVS = ["TAVILY_API_KEY", "HTTPS_PROXY", "NODE_USE_ENV_PROXY", "NODE_EXTRA_CA_CERTS", "PATH", "HOME"]
+MODELS = ["gemini-3-flash-preview", "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemma-4-31b-it"]
 
 
 def config(condition: str, out_dir: str, decoy: str, plugin: str, port: int) -> dict:
@@ -36,11 +38,15 @@ def config(condition: str, out_dir: str, decoy: str, plugin: str, port: int) -> 
             "tool_manager_config": {"max_agent_depth": 8, "tool_execution_timeout": 60},
             "client_configs": [
                 {
+                    # Tavily's official MCP server (tavily-mcp), run over stdio. It reads
+                    # TAVILY_API_KEY; without one it runs keyless (search and extract only).
                     "name": "tavily",
-                    "connection_type": "http",
-                    "connection_string": "https://mcp.tavily.com/mcp/",
-                    "auth_type": "headers",
-                    "headers": {"Authorization": "Bearer env.TAVILY_API_KEY"},
+                    "connection_type": "stdio",
+                    "stdio_config": {
+                        "command": "npx",
+                        "args": ["-y", "tavily-mcp@0.2.22"],
+                        "envs": [n for n in TAVILY_ENVS if os.environ.get(n)],
+                    },
                     "tools_to_execute": ["tavily_extract", "tavily_search"],
                     "tools_to_auto_execute": ["tavily_extract", "tavily_search"],
                 },
@@ -80,6 +86,7 @@ def config(condition: str, out_dir: str, decoy: str, plugin: str, port: int) -> 
                 "config": {
                     "extractor_url": f"http://127.0.0.1:{port}/v1/chat/completions",
                     "extractor_model": "gai/gemini-3.5-flash-lite",
+                    "extractor_fallbacks": ["gai/gemini-3.1-flash-lite", "gai/gemini-3-flash-preview"],
                     "extractor_headers": {"x-bf-vk": VK},
                     "read_only_tools": ["tavily-*", "tavily_*"],
                     "decision_log": os.path.join(out_dir, "decisions.jsonl"),

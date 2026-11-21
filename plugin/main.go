@@ -30,6 +30,8 @@ type Config struct {
 	ExtractorURL string `json:"extractor_url"`
 	// ExtractorModel is the model for refusal extraction, e.g. "gai/gemini-3.5-flash-lite".
 	ExtractorModel string `json:"extractor_model"`
+	// ExtractorFallbacks are models Bifrost tries when ExtractorModel is overloaded.
+	ExtractorFallbacks []string `json:"extractor_fallbacks"`
 	// ExtractorHeaders are sent with each extractor call (for example x-bf-vk).
 	ExtractorHeaders map[string]string `json:"extractor_headers"`
 	// ReadOnlyTools are glob patterns for tools that are never blocked.
@@ -87,7 +89,7 @@ func Init(config any) error {
 		headers[k] = os.ExpandEnv(v)
 	}
 	policy = saidno.Policy{ReadOnlyTools: cfg.ReadOnlyTools, FailClosed: boolOr(cfg.FailClosed, true)}
-	ex := &saidno.Extractor{URL: cfg.ExtractorURL, Model: cfg.ExtractorModel, Headers: headers,
+	ex := &saidno.Extractor{URL: cfg.ExtractorURL, Model: cfg.ExtractorModel, Headers: headers, Fallbacks: cfg.ExtractorFallbacks,
 		Client: &http.Client{Timeout: 60 * time.Second}}
 	store = saidno.NewStore(ex, 2*time.Hour)
 	if cfg.DecisionLog != "" {
