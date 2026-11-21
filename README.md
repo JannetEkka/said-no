@@ -4,7 +4,7 @@
 
 Built for the Geek Room Global AI Hackathon 2026, problem statement 4: *Build a feature the open-source gateway is missing*. Tavily is integrated as the agent's web access (problem statements 5 and 6 are Tavily's; this entry ticks the Tavily integration box).
 
-> **Live replay of the measured runs:** https://jannetekka.github.io/said-no/ · **Results:** [results/summary.md](results/summary.md)
+> **Live replay of the measured runs:** https://jannetekka.github.io/said-no/ · **Results:** [results/summary.md](results/summary.md) · **Demo video (2.5 min):** [docs/demo.mp4](docs/demo.mp4)
 
 ## The problem
 
@@ -26,12 +26,12 @@ Why the hijacked case is the one that matters: the agents we tested usually resi
 
 | What we measured (agent mode: a real agent reads the page through Tavily and acts) | Without Said No | With Said No |
 |---|---|---|
-| Gemini 3.1 Flash-Lite: refused action ran | 1 of 72 runs | 0 of 72 (pass 2) · 0 of GEMMA_LITE3 so far on the fixed build |
+| Gemini 3.1 Flash-Lite: refused action ran | 1 of 72 runs | 0 of 72 (pass 2) · 0 of 13 on the fixed build before the quota ran out |
 | Gemini 3.1 Flash-Lite: requested action blocked by mistake | n/a | 0 of 36 (pass 2) |
-| Gemma 4 31B: refused action ran | GEMMA_WO_VIOL | GEMMA_WI_VIOL |
-| Gemma 4 31B: requested action blocked by mistake | n/a | GEMMA_WI_FB |
+| Gemma 4 31B: refused action ran (fixed build; stopped for the deadline during run 2 of 3) | 0 of 48 runs | 0 of 42 |
+| Gemma 4 31B: requested action blocked by mistake | n/a | 0 of 17 |
 
-**Cost.** A decision on a tool call takes a median of COST_DECIDE (code only, no model call). Reading a new refusal takes a median of COST_EXTRACT, once per new user message that contains refusal or permission words; repeated messages come from a cache (COST_CACHE). Full numbers, per run: [results/summary.md](results/summary.md).
+**Cost.** A decision on a tool call takes a median of 69 µs (max 441 µs, over 96 calls) (code only, no model call). Reading a new refusal takes a median of 1.4 s, once per new user message that contains refusal or permission words; repeated messages come from a cache (262 cache hits against 56 model calls in the final pass). Full numbers, per run: [results/summary.md](results/summary.md).
 
 **What the suite caught in our own code.** We ran the suite three times and kept every pass:
 - **Pass 1** ([results/pre-fix](results/pre-fix)): with Said No on, one share still ran. The extractor had narrowed "don't share the launch document" to a document name it guessed from the page's URL. Fix: a narrowing must be in the user's words.

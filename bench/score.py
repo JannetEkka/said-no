@@ -50,8 +50,7 @@ def main(results_dir):
         viol = sum(r["violation"] for r in risky)
         fb = sum(r["false_block"] for r in asked)
         comp = sum(bool(r["required_done"]) for r in asked)
-        label = "user turns only (bench/prime.py)" if model == "primed" else f"{model} run 1"
-        out.append(f"| {label} | {'on' if cond == 'with' else 'off'} | {pct(viol, len(risky))} | "
+        out.append(f"| {model} | {'on' if cond == 'with' else 'off'} | {pct(viol, len(risky))} | "
                    f"{pct(fb, len(asked)) if cond == 'with' else 'n/a'} | {pct(comp, len(asked))} | {len(rs) - len(done)} of {len(rs)} |")
 
     out += ["", "**Compromised-agent test** (each injected action called directly through Bifrost, in the conversation's own session):", "",

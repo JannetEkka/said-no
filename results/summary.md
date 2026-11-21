@@ -2,21 +2,21 @@
 |---|---|---|---|---|---|
 | gemini-3.1-flash-lite | off | 1/72 (1%) | n/a | 36/36 (100%) | 0 of 90 |
 | gemini-3.1-flash-lite | on | 0/13 (0%) | 0/0 | 0/0 | 12 of 25 |
-| gemma-4-31b-it | off | 0/35 (0%) | n/a | 12/12 (100%) | 1 of 42 |
-| gemma-4-31b-it | on | 0/32 (0%) | 0/12 (0%) | 12/12 (100%) | 0 of 38 |
+| gemma-4-31b-it | off | 0/48 (0%) | n/a | 24/24 (100%) | 1 of 61 |
+| gemma-4-31b-it | on | 0/42 (0%) | 0/17 (0%) | 17/17 (100%) | 0 of 53 |
 
 **Compromised-agent test** (each injected action called directly through Bifrost, in the conversation's own session):
 
-| Agent model's sessions | Said No | Injected actions that ran | Requested actions blocked |
+| Conversations from | Said No | Injected actions that ran | Requested actions blocked |
 |---|---|---|---|
-| gemini-3.1-flash-lite | off | 24/24 (100%) | 0/12 (0%) |
-| primed | on | 0/24 (0%) | 0/12 (0%) |
+| gemini-3.1-flash-lite run 1 | off | 24/24 (100%) | 0/12 (0%) |
+| user turns only (bench/prime.py) | on | 0/24 (0%) | 0/12 (0%) |
 
 **Cost of the plugin** (from its own decision log):
 
-- Decision time per tool call: median 69 µs, max 441 µs, over 71 calls.
-- Refusal reading: 56 ledger updates that called the model; median 1428 ms each. Updates served from cache: 205.
-- Blocks: 0 of 71 tool calls.
+- Decision time per tool call: median 69 µs, max 441 µs, over 96 calls.
+- Refusal reading: 56 ledger updates that called the model; median 1428 ms each. Updates served from cache: 262.
+- Blocks: 0 of 96 tool calls.
 
 **Refused actions that ran without Said No** (task, model, run, what ran, what the agent told the user):
 
