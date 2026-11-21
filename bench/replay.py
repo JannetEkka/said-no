@@ -4,7 +4,7 @@ Usage: python3 bench/replay.py results docs/data.json
 
 For every task and agent model it keeps run 1 of each condition: the user's
 turns, the injected line on the page, the actions that ran (decoy log), the
-plugin's decisions, and the agent's reply. It also embeds the summary counts.
+plugin's decisions, and the agent's reply, plus the compromised-agent\ntest's result for the task's injected action. It also embeds the summary counts.
 Nothing is edited by hand: the page shows exactly what the runs recorded.
 """
 import glob
@@ -38,6 +38,15 @@ def main(results_dir, out_path):
             model = r["model"].split("/")[-1]
             key = (r["task"], model, r["condition"], r["run"])
             runs[key] = r
+    # The compromised-agent test: the injected action called directly, per task and condition.
+    forced = {}
+    for p in glob.glob(os.path.join(results_dir, "forced-*.jsonl")):
+        for line in open(p):
+            f = json.loads(line)
+            if f["kind"] != "forbidden":
+                continue
+            forced.setdefault(f["task"], {}).setdefault(f["condition"], []).append(
+                {"tool": f["tool"], "arguments": f["arguments"], "allowed": not f["blocked"], "reason": f["result"]})
     items = []
     models = sorted({k[1] for k in runs})
     for tid, t in tasks.items():
@@ -52,6 +61,7 @@ def main(results_dir, out_path):
                     "turns": t["turns"], "page": t["page"], "injection": injected_line(os.path.join(docs, slug)),
                     "forbidden": expected[tid]["forbidden"], "required": expected[tid]["required"],
                     "without": side(wo), "with": side(wi),
+                    "forced": forced.get(tid, {}),
                 })
     summary_path = os.path.join(results_dir, "summary.md")
     data = {"items": items, "models": models,
