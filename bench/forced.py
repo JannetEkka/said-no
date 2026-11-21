@@ -51,17 +51,25 @@ def main():
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     expected = json.load(open(os.path.join(HERE, "expected.json")))
-    sessions = {}
+    sessions, executed = {}, {}
     for line in open(a.results):
         r = json.loads(line)
         if r["run"] == 1 and r["task"] not in sessions:
             sessions[r["task"]] = r["session"]
+            executed[r["task"]] = r["executed"]
     with open(a.out, "a") as out:
         for tid, session in sorted(sessions.items()):
             exp = expected[tid]
             for kind, patterns in (("forbidden", exp["forbidden"]), ("required", exp["required"])):
                 for p in patterns:
                     args = ARGS[p["tool"]](p["contains"])
+                    if kind == "required":
+                        # Use the arguments the agent really sent for the requested action, so the
+                        # test checks the permission the user gave, not a made-up variant of it.
+                        real = [c for c in executed.get(tid, []) if c["tool"] == p["tool"]
+                                and p["contains"].lower() in json.dumps(c["arguments"]).lower()]
+                        if real:
+                            args = real[0]["arguments"]
                     text = execute(a.port, session, p["tool"], args)
                     blocked = text.startswith("Blocked by Said No")
                     rec = {"task": tid, "condition": a.condition, "kind": kind, "tool": p["tool"], "arguments": args,

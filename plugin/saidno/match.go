@@ -105,6 +105,15 @@ func holds(c Cond, args map[string]string) bool {
 	if c.Op == OpAny {
 		return true
 	}
+	if c.Arg == "*" {
+		// Any argument: used for the scope named in a permission.
+		for _, v := range args {
+			if holds(Cond{Arg: "x", Op: c.Op, Value: c.Value}, map[string]string{"x": v}) {
+				return true
+			}
+		}
+		return c.Op == OpNotContains && len(args) == 0
+	}
 	v, ok := args[strings.ToLower(c.Arg)]
 	want := strings.ToLower(c.Value)
 	if !ok {

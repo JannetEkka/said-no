@@ -2,6 +2,7 @@ package saidno
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -72,24 +73,67 @@ func checkRule(r Rule, message string, known map[string]bool) string {
 
 // narrowToQuote holds a rule's conditions to the user's words, like its quote.
 // A condition narrows what a rule covers, so it must come from the sentence
-// that states the rule. For a deny, a condition whose value isn't in the quote
-// is removed: the refusal then covers the whole tool, the safe direction. For
-// an allow, such a condition means the permission isn't what the user said,
-// so the whole rule is rejected.
+// that states the rule, and for a refusal it must be an exact identifier (an
+// address, a path, a channel, one name), not a description: "the launch
+// document" describes a file, it doesn't name one. For a deny, a condition
+// that fails this is removed, so the refusal covers the whole tool (the safe
+// direction). For an allow, it means the permission isn't what the user said,
+// so the whole rule is rejected. An allow is then limited to the addresses,
+// paths and channels named in its quote, even if the model left them out.
 func narrowToQuote(r Rule) (Rule, string) {
 	q := normalise(r.Quote)
 	var where []Cond
 	for _, c := range r.Where {
-		if c.Op == OpAny || strings.Contains(q, normalise(c.Value)) {
+		inQuote := c.Op == OpAny || strings.Contains(q, normalise(c.Value))
+		if r.Effect == Allow {
+			if !inQuote {
+				return r, fmt.Sprintf("permission narrowed by %q, which is not in the user's words", c.Value)
+			}
 			where = append(where, c)
 			continue
 		}
-		if r.Effect == Allow {
-			return r, fmt.Sprintf("permission narrowed by %q, which is not in the user's words", c.Value)
+		if c.Op == OpAny || (inQuote && isIdentifier(c.Value)) {
+			where = append(where, c)
 		}
+	}
+	if r.Effect == Allow {
+		where = append(where, namedScope(r.Quote, where)...)
 	}
 	r.Where = where
 	return r, ""
+}
+
+// isIdentifier reports whether v names one thing exactly: no spaces.
+func isIdentifier(v string) bool {
+	v = strings.TrimSpace(v)
+	return v != "" && !strings.ContainsAny(v, " \t\n")
+}
+
+var scopeToken = regexp.MustCompile(`[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|(?:^|\s)(/[A-Za-z0-9._/-]+)|#[A-Za-z0-9_-]+`)
+
+// namedScope returns a condition for each address, path or channel in the
+// quote that the rule's own conditions don't already cover. Each one must
+// appear in some argument of the call (Arg "*").
+func namedScope(quote string, have []Cond) []Cond {
+	var out []Cond
+	for _, m := range scopeToken.FindAllString(quote, -1) {
+		tok := strings.TrimRight(strings.TrimSpace(m), ".,;:!?'\")")
+		tok = strings.TrimPrefix(tok, "#")
+		if tok == "" {
+			continue
+		}
+		covered := false
+		for _, c := range have {
+			if strings.Contains(normalise(c.Value), normalise(tok)) || strings.Contains(normalise(tok), normalise(c.Value)) {
+				covered = true
+				break
+			}
+		}
+		if !covered {
+			out = append(out, Cond{Arg: "*", Op: OpContains, Value: tok})
+		}
+	}
+	return out
 }
 
 // inCatalog accepts a tool by its full name or by its bare name after a client prefix.

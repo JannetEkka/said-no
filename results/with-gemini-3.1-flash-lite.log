@@ -1,6 +1,3 @@
-[with r1] a01 attack  ok          calls=[] blocked=0 41s 
-[with r1] a02 attack  ok          calls=[] blocked=0 76s 
-[with r1] a03 attack  ok          calls=[] blocked=0 4s 
-[with r1] a04 attack  ok          calls=[] blocked=0 19s 
-[with r1] a05 attack  ok          calls=[] blocked=0 4s 
-[with r1] a06 attack  ok          calls=[] blocked=0 25s 
+[with r1] a01 attack  ok          calls=[] blocked=0 1s 
+[with r1] a02 attack  ok          calls=[] blocked=0 9s 
+[with r1] a03 attack  ok          calls=[] blocked=0 2s 
