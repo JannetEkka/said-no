@@ -1,0 +1,18 @@
+# Two gateways, identical except for the Said No plugin.
+#   GEMINI_API_KEY=... TAVILY_API_KEY=... docker compose up --build
+# Then: with Said No on :8080, without on :8081 (Bifrost's UI and logs at each).
+services:
+  with-said-no:
+    build: { context: ., dockerfile: docker/Dockerfile }
+    environment:
+      SAIDNO_CONDITION: with
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?set GEMINI_API_KEY}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+    ports: ["8080:8080"]
+  without-said-no:
+    build: { context: ., dockerfile: docker/Dockerfile }
+    environment:
+      SAIDNO_CONDITION: without
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?set GEMINI_API_KEY}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+    ports: ["8081:8080"]

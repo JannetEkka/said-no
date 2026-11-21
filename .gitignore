@@ -1,0 +1,6 @@
+build/
+*.so
+node_modules/
+.env
+/build/
+__pycache__/
