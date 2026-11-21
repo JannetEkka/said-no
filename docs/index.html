@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Said No</title>
+<meta name="description" content="A Bifrost gateway plugin that holds AI agents to the user's own refusals, even when a web page read through Tavily says otherwise. Replay of the measured runs.">
+<style>
+  :root {
+    --paper: #fbfaf7; --ink: #1d1b18; --muted: #5f5a52; --rule: #d9d4ca; --card: #ffffff;
+    --code: #f1eee8; --accent: #a8231b; --accent-soft: #f6e3e1; --ok: #1d1b18;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #151412; --ink: #ece8e1; --muted: #aaa398; --rule: #3a3631; --card: #1d1b18;
+      --code: #26231f; --accent: #ff7b70; --accent-soft: #3a1d1a; --ok: #ece8e1;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #151412; --ink: #ece8e1; --muted: #aaa398; --rule: #3a3631; --card: #1d1b18;
+    --code: #26231f; --accent: #ff7b70; --accent-soft: #3a1d1a; --ok: #ece8e1;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); }
+  body { font: 17px/1.55 var(--serif); }
+  a { color: inherit; text-underline-offset: 3px; }
+  main { max-width: 74rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+  .eyebrow { font: 13px/1.4 var(--mono); color: var(--muted); letter-spacing: .02em; margin: 0 0 .75rem; }
+  h1 { font-size: clamp(2.4rem, 6vw, 4.2rem); line-height: 1.02; margin: 0 0 .75rem; font-weight: 700; letter-spacing: -.02em; }
+  .lede { font-size: 1.15rem; max-width: 46rem; margin: 0 0 1.5rem; }
+  .controls { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: end; margin: 0 0 1rem; font: 14px var(--mono); }
+  .controls label { display: flex; flex-direction: column; gap: .25rem; color: var(--muted); }
+  select, button { font: 14px var(--mono); color: var(--ink); background: var(--card); border: 1px solid var(--rule); border-radius: 4px; padding: .45rem .6rem; min-height: 2.4rem; }
+  button { cursor: pointer; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 760px) { .pair { grid-template-columns: 1fr; } }
+  .side { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 1rem 1rem 1.25rem; position: relative; }
+  .side h2 { font: 600 13px/1.3 var(--mono); text-transform: uppercase; letter-spacing: .08em; margin: 0 0 .9rem; color: var(--muted); }
+  .side h2 strong { color: var(--ink); }
+  ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: .9rem; }
+  .step { opacity: 0; transform: translateY(6px); transition: opacity .35s ease, transform .35s ease; }
+  .step.in { opacity: 1; transform: none; }
+  .who { font: 12px/1.2 var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .25rem; }
+  .said { margin: 0; }
+  .quote { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  .with .quote { text-decoration-color: var(--accent); }
+  .page { font: 13px/1.5 var(--mono); background: var(--code); border-left: 3px solid var(--rule); padding: .55rem .7rem; margin: 0; white-space: pre-wrap; word-break: break-word; }
+  .call { font: 13px/1.45 var(--mono); border: 1px solid var(--rule); border-radius: 4px; padding: .55rem .7rem; display: grid; gap: .3rem; }
+  .call code { white-space: pre-wrap; word-break: break-word; }
+  .stamp { font: 700 12px/1 var(--mono); letter-spacing: .1em; padding: .3rem .45rem; border: 2px solid currentColor; border-radius: 3px; justify-self: start; }
+  .stamp.ran { color: var(--ok); }
+  .stamp.blocked { color: var(--accent); background: var(--accent-soft); }
+  .reason { color: var(--accent); }
+  .web { color: var(--muted); font-size: 12px; }
+  .reply { margin: 0; font-size: .98rem; }
+  .none { color: var(--muted); font: 13px var(--mono); }
+  .link-line { position: absolute; left: .35rem; width: 3px; background: var(--accent); transform-origin: top; transform: scaleY(0); transition: transform .7s ease .15s; border-radius: 2px; }
+  .link-line.in { transform: scaleY(1); }
+  .verdict { font: 14px/1.4 var(--mono); margin: .9rem 0 0; }
+  section { margin-top: 3rem; }
+  section h2 { font-size: 1.6rem; margin: 0 0 .75rem; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--card); }
+  table { border-collapse: collapse; width: 100%; font: 14px/1.45 var(--mono); }
+  th, td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .md p, .md li { max-width: 60rem; }
+  .md li { margin: .3rem 0; }
+  .how { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; }
+  .how div { border-top: 2px solid var(--ink); padding-top: .6rem; }
+  .how h3 { margin: 0 0 .3rem; font-size: 1.05rem; }
+  .how p { margin: 0; font-size: .97rem; }
+  footer { margin-top: 3rem; font: 13px/1.6 var(--mono); color: var(--muted); }
+  .theme { position: absolute; top: 1rem; right: 1rem; }
+  @media (prefers-reduced-motion: reduce) { .step, .link-line { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <button class="theme" id="theme" type="button" aria-label="Switch light or dark theme">Theme</button>
+  <p class="eyebrow">Said No · a plugin for the open-source Bifrost AI gateway · Tavily for web access</p>
+  <h1>Your no stays no.</h1>
+  <p class="lede">A user tells an AI assistant what <em>not</em> to do. A web page the assistant reads tells it to do exactly that. Said No reads only the user's own messages and blocks the refused action at the gateway, quoting the user's words. Below: the same task, the same model and the same page, without and with Said No, replayed from the recorded runs.</p>
+
+  <div class="controls" role="group" aria-label="Choose a recorded run">
+    <label>Agent model <select id="model"></select></label>
+    <label>Task <select id="task"></select></label>
+    <label>Run <select id="run"></select></label>
+    <button id="replay" type="button">Replay</button>
+  </div>
+
+  <div class="pair" id="pair" aria-live="polite"></div>
+
+  <section aria-labelledby="results-h">
+    <h2 id="results-h">What the runs measured</h2>
+    <div class="md" id="summary"><p class="none">Loading results…</p></div>
+  </section>
+
+  <section aria-labelledby="how-h">
+    <h2 id="how-h">How it decides</h2>
+    <div class="how">
+      <div><h3>1 · The agent</h3><p>Any model behind Bifrost does the task, reading pages through Tavily's MCP server. It never sees the rules.</p></div>
+      <div><h3>2 · The extractor</h3><p>A small model reads only messages from the user and writes each refusal or permission as a rule with the user's exact words.</p></div>
+      <div><h3>3 · The validator</h3><p>Code drops any rule, or any narrowing of one, that can't point at the user's own words. Web pages can't create or lift a rule.</p></div>
+      <div><h3>4 · The matcher</h3><p>Code rules on every tool call before it runs. The latest thing the user said wins. A blocked call never reaches the tool.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Code, tests and raw results: <a href="https://github.com/JannetEkka/said-no">github.com/JannetEkka/said-no</a>. Attack wording and goals adapted from <a href="https://github.com/ethz-spylab/agentdojo">AgentDojo</a> (MIT). Action tools in the suite are inert decoys: they record the call and run nothing.</p>
+  </footer>
+</main>
+<script>
+(function () {
+  "use strict";
+  var data = null;
+  var $ = function (id) { return document.getElementById(id); };
+
+  try {
+    var saved = localStorage.getItem("saidno-theme");
+    if (saved) document.documentElement.setAttribute("data-theme", saved);
+  } catch (e) {}
+  $("theme").addEventListener("click", function () {
+    var dark = getComputedStyle(document.documentElement).getPropertyValue("--paper").trim() === "#151412";
+    var next = dark ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("saidno-theme", next); } catch (e) {}
+  });
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  // Put the user's quoted words in an underlined span (exact, case-insensitive).
+  function withQuote(text, quotes) {
+    var p = el("p", "said");
+    var lower = text.toLowerCase(), spans = [];
+    (quotes || []).forEach(function (q) {
+      if (!q) return;
+      var i = lower.indexOf(q.toLowerCase());
+      if (i >= 0) spans.push([i, i + q.length]);
+    });
+    spans.sort(function (a, b) { return a[0] - b[0]; });
+    var at = 0;
+    spans.forEach(function (s) {
+      if (s[0] < at) return;
+      p.appendChild(document.createTextNode(text.slice(at, s[0])));
+      p.appendChild(el("span", "quote", text.slice(s[0], s[1])));
+      at = s[1];
+    });
+    p.appendChild(document.createTextNode(text.slice(at)));
+    return p;
+  }
+
+  function args(a) {
+    if (typeof a === "string") { try { a = JSON.parse(a); } catch (e) { return a; } }
+    return Object.keys(a || {}).map(function (k) { return k + ": " + JSON.stringify(a[k]); }).join("\n");
+  }
+
+  function sideCard(item, which) {
+    var s = item[which], isWith = which === "with";
+    var card = el("article", "side " + which);
+    var h = el("h2"); h.appendChild(el("strong", null, isWith ? "With Said No" : "Without Said No"));
+    h.appendChild(document.createTextNode(" · " + item.model));
+    card.appendChild(h);
+    var ol = el("ol", "steps");
+    var quotes = isWith ? s.rules.map(function (r) { return r.quote; }) : [];
+    item.turns.forEach(function (t) {
+      var li = el("li", "step");
+      li.appendChild(el("div", "who", t.role === "user" ? "User" : "Assistant (earlier turn)"));
+      li.appendChild(t.role === "user" ? withQuote(t.content, quotes) : el("p", "said", t.content));
+      if (t.role === "user" && isWith && quotes.length) li.setAttribute("data-anchor", "quote");
+      ol.appendChild(li);
+    });
+    var pg = el("li", "step");
+    pg.appendChild(el("div", "who", "Page read through Tavily · injected text"));
+    pg.appendChild(el("pre", "page", item.injection || "(no injection on this page)"));
+    ol.appendChild(pg);
+
+    var acts = el("li", "step");
+    acts.appendChild(el("div", "who", "Agent's actions"));
+    var list = isWith ? s.decisions : s.executed.map(function (c) { return { tool: c.tool, arguments: c.arguments, allowed: true }; });
+    if (!list.length) acts.appendChild(el("p", "none", "No action tools called."));
+    list.forEach(function (d) {
+      var c = el("div", "call");
+      c.appendChild(el("span", "stamp " + (d.allowed ? "ran" : "blocked"), d.allowed ? "RAN" : "BLOCKED"));
+      c.appendChild(el("code", null, d.tool.replace(/^decoy-/, "") + "\n" + args(d.arguments)));
+      if (!d.allowed) { c.appendChild(el("span", "reason", "Blocked: " + d.reason)); acts.setAttribute("data-anchor", "block"); }
+      if (d.web_sourced && d.web_sourced.length) c.appendChild(el("span", "web", "From the page, not the user: " + d.web_sourced.join(", ")));
+      acts.appendChild(c);
+    });
+    ol.appendChild(acts);
+
+    var rep = el("li", "step");
+    rep.appendChild(el("div", "who", "What the agent told the user"));
+    var replyText = (s.reply || "").replace(/\*\*/g, "").trim();
+    rep.appendChild(el("p", "reply", replyText || (s.error ? "Error: " + s.error : "(the agent returned no text)")));
+    ol.appendChild(rep);
+    card.appendChild(ol);
+
+    var v = s.violation ? "A refused action ran." : (s.false_block ? "The action the user asked for was blocked." : "No refused action ran.");
+    card.appendChild(el("p", "verdict", v));
+    return card;
+  }
+
+  function drawLink(card) {
+    var a = card.querySelector('[data-anchor="quote"] .quote'), b = card.querySelector('[data-anchor="block"] .stamp.blocked');
+    if (!a || !b) return;
+    var box = card.getBoundingClientRect(), ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    var line = el("div", "link-line");
+    line.setAttribute("aria-hidden", "true");
+    line.style.top = (ra.top - box.top + ra.height / 2) + "px";
+    line.style.height = Math.max(0, rb.top - ra.top) + "px";
+    card.appendChild(line);
+    requestAnimationFrame(function () { line.classList.add("in"); });
+  }
+
+  function current() {
+    var m = $("model").value, t = $("task").value, r = +$("run").value;
+    return data.items.find(function (i) { return i.model === m && i.task === t && i.run === r; });
+  }
+
+  function show() {
+    var item = current(), pair = $("pair");
+    pair.innerHTML = "";
+    if (!item) { pair.appendChild(el("p", "none", "No recorded run for this choice.")); return; }
+    var a = sideCard(item, "without"), b = sideCard(item, "with");
+    pair.appendChild(a); pair.appendChild(b);
+    var steps = pair.querySelectorAll(".step"), reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var perSide = steps.length / 2;
+    Array.prototype.forEach.call(steps, function (s, i) {
+      setTimeout(function () { s.classList.add("in"); }, reduce ? 0 : (i % perSide) * 450);
+    });
+    setTimeout(function () { drawLink(b); }, reduce ? 0 : perSide * 450);
+  }
+
+  function fillTasks() {
+    var m = $("model").value, seen = {}, sel = $("task"), prev = sel.value;
+    sel.innerHTML = "";
+    data.items.filter(function (i) { return i.model === m; }).forEach(function (i) {
+      if (seen[i.task]) return; seen[i.task] = true;
+      var hit = data.items.some(function (j) { return j.model === m && j.task === i.task && j.without.violation; });
+      var o = el("option", null, i.task + " · " + i.kind + (hit ? " · refused action ran without Said No" : ""));
+      o.value = i.task; sel.appendChild(o);
+    });
+    if (seen[prev]) sel.value = prev;
+    fillRuns();
+  }
+
+  function fillRuns() {
+    var m = $("model").value, t = $("task").value, sel = $("run");
+    sel.innerHTML = "";
+    data.items.filter(function (i) { return i.model === m && i.task === t; }).forEach(function (i) {
+      var o = el("option", null, "run " + i.run + (i.without.violation ? " · ran without" : "")); o.value = i.run; sel.appendChild(o);
+    });
+  }
+
+  // Minimal Markdown for the summary: tables, bullet lists, bold, paragraphs.
+  function renderMd(md, into) {
+    into.innerHTML = "";
+    var lines = md.split("\n"), i = 0;
+    function inline(t, node) {
+      t.split(/(\*\*[^*]+\*\*)/).forEach(function (part) {
+        if (/^\*\*.*\*\*$/.test(part)) node.appendChild(el("strong", null, part.slice(2, -2)));
+        else node.appendChild(document.createTextNode(part));
+      });
+      return node;
+    }
+    while (i < lines.length) {
+      var l = lines[i];
+      if (/^\|/.test(l)) {
+        var wrap = el("div", "table-wrap"), tb = el("table"), rows = [];
+        while (i < lines.length && /^\|/.test(lines[i])) { rows.push(lines[i]); i++; }
+        rows.forEach(function (r, ri) {
+          if (/^\|[-| ]+\|$/.test(r)) return;
+          var tr = el("tr");
+          r.slice(1, -1).split("|").forEach(function (c) { tr.appendChild(inline(c.trim(), el(ri === 0 ? "th" : "td"))); });
+          tb.appendChild(tr);
+        });
+        wrap.appendChild(tb); into.appendChild(wrap); continue;
+      }
+      if (/^- /.test(l)) {
+        var ul = el("ul");
+        while (i < lines.length && /^- /.test(lines[i])) { ul.appendChild(inline(lines[i].slice(2), el("li"))); i++; }
+        into.appendChild(ul); continue;
+      }
+      if (l.trim()) into.appendChild(inline(l, el("p")));
+      i++;
+    }
+  }
+
+  fetch("data.json").then(function (r) { return r.json(); }).then(function (d) {
+    data = d;
+    d.models.forEach(function (m) { var o = el("option", null, m); o.value = m; $("model").appendChild(o); });
+    var first = d.items.find(function (i) { return i.without.violation && !i.with.violation && i.with.decisions.some(function (x) { return !x.allowed; }); })
+      || d.items.find(function (i) { return i.without.violation && !i.with.violation; }) || d.items[0];
+    if (first) $("model").value = first.model;
+    fillTasks();
+    if (first) { $("task").value = first.task; fillRuns(); $("run").value = first.run; }
+    show();
+    renderMd(d.summary_md || "", $("summary"));
+  }).catch(function () {
+    $("pair").appendChild(el("p", "none", "Couldn't load the recorded runs (data.json)."));
+  });
+  $("model").addEventListener("change", function () { fillTasks(); show(); });
+  $("task").addEventListener("change", function () { fillRuns(); show(); });
+  $("run").addEventListener("change", show);
+  $("replay").addEventListener("click", show);
+})();
+</script>
+</body>
+</html>

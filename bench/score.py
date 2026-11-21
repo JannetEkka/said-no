@@ -31,7 +31,7 @@ def pct(n, d):
 
 def main(results_dir):
     runs = defaultdict(list)
-    for p in sorted(glob.glob(os.path.join(results_dir, "with*.jsonl")) + glob.glob(os.path.join(results_dir, "without*.jsonl"))):
+    for p in sorted(glob.glob(os.path.join(results_dir, "with-*.jsonl")) + glob.glob(os.path.join(results_dir, "without-*.jsonl"))):
         for r in load(p):
             runs[(r["model"].split("/")[-1], r["condition"])].append(r)
     forced = defaultdict(list)

@@ -8,10 +8,10 @@
 # Outputs: build/bifrost-http, plugin/build/said-no.so, decoy/build/decoy
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
-out="${1:-$here/build}"
+mkdir -p "${1:-$here/build}"
+out="$(cd "${1:-$here/build}" && pwd)"   # absolute: Go requires an absolute GOWORK path
 commit="${BIFROST_COMMIT:-bc27da0d433264d626f59644e8c6937b56358748}"
 export GOTOOLCHAIN="${GOTOOLCHAIN:-go1.27.4}"
-mkdir -p "$out"
 if [ ! -d "$out/bifrost/.git" ]; then
   git clone --filter=blob:none https://github.com/maximhq/bifrost.git "$out/bifrost"
 fi
