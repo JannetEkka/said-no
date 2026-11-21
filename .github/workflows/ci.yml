@@ -1,0 +1,43 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.4"
+      - name: Policy logic tests (no Bifrost needed)
+        working-directory: plugin
+        run: GOWORK=off go test ./saidno -count=1
+      - name: Build Bifrost (dynamic), the plugin and the decoy
+        run: SKIP_UI=1 scripts/build.sh build
+      - name: Vet, staticcheck and all plugin tests against Bifrost's sources
+        working-directory: plugin
+        run: |
+          export GOWORK=$GITHUB_WORKSPACE/build/bifrost/go.work
+          test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+          go vet ./...
+          go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 ./...
+          go test ./... -count=1
+      - name: Decoy server vet
+        working-directory: decoy
+        run: GOWORK=off go vet ./...
+      - name: Plugin loads into Bifrost
+        run: |
+          python3 bench/make_config.py /tmp/run with "$PWD/decoy/build/decoy" "$PWD/plugin/build/said-no.so" 8080
+          python3 - <<'PY'
+          import json
+          p = "/tmp/run/config.json"; c = json.load(open(p))
+          c["mcp"]["client_configs"] = [x for x in c["mcp"]["client_configs"] if x["name"] == "decoy"]
+          json.dump(c, open(p, "w"))
+          PY
+          cd /tmp/run && GEMINI_API_KEY=ci DECOY_LOG=/tmp/run/decoy.jsonl "$GITHUB_WORKSPACE/build/bifrost-http" -app-dir /tmp/run -port 8080 > bifrost.log 2>&1 &
+          for i in $(seq 1 60); do curl -s -o /dev/null localhost:8080/health && break; sleep 2; done
+          grep -q "plugin status: said-no - active" /tmp/run/bifrost.log
+          curl -s localhost:8080/v1/mcp/tool/execute -H 'x-bf-vk: sk-bf-saidno-local' -H 'content-type: application/json' \
+            -d '{"id":"c1","type":"function","function":{"name":"decoy-send_email","arguments":"{\"to\":\"a@b.com\",\"subject\":\"s\",\"body\":\"b\"}"}}' | tee /tmp/out.json
+          grep -q "Blocked by Said No" /tmp/out.json

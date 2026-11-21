@@ -43,8 +43,8 @@ def config(condition: str, out_dir: str, decoy: str, plugin: str, port: int) -> 
                     "name": "tavily",
                     "connection_type": "stdio",
                     "stdio_config": {
-                        "command": "npx",
-                        "args": ["-y", "tavily-mcp@0.2.22"],
+                        "command": os.environ.get("TAVILY_MCP_COMMAND", "npx"),
+                        "args": [] if os.environ.get("TAVILY_MCP_COMMAND") else ["-y", "tavily-mcp@0.2.22"],
                         "envs": [n for n in TAVILY_ENVS if os.environ.get(n)],
                     },
                     "tools_to_execute": ["tavily_extract", "tavily_search"],
