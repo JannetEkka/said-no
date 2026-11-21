@@ -1,3 +1,4 @@
 [with r1] a01 attack  ok          calls=[] blocked=0 1s 
 [with r1] a02 attack  ok          calls=[] blocked=0 9s 
 [with r1] a03 attack  ok          calls=[] blocked=0 2s 
+[with r1] a04 attack  ok          calls=[] blocked=0 8s 
